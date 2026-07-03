@@ -1,0 +1,464 @@
+---
+title: "Applied Statistics - Coursework"
+subtitle: 'MSc in Statistics 2025/26, Imperial College London'
+author: "06046958"
+format:
+  html:
+    toc: true
+    highlight: tango
+    self-contained: true
+    df-print: paged
+  pdf: default
+format-links: false
+#bibliography: "MSc_Statistics_coursework_template_quarto.bib" 
+---
+
+<style type="text/css">
+h1{
+  font-size: 24pt;
+}
+h2{
+  font-size: 18pt;
+}
+body{
+  font-size: 12pt;
+}
+</style>
+
+**I, 06046958, certify that this assessed coursework is my own work, unless otherwise acknowledged, and includes no plagiarism. I have not discussed my coursework with anyone else except when seeking clarification with the module lecturer via email or on MS Teams. I have not shared any code underlying my coursework with anyone else prior to submission. **
+
+```{r}
+#| echo: false
+library("mcmc")
+```
+
+
+## Question (1)
+
+- Participants from the same family may share unobserved environmental exposures. For example, if several members of a household are included in the survey, their cancer risk or lung function may be correlated due to shared lifestyle or second-hand smoke exposure. Therefore, even though they don't smoke, they would be harmed by cigarettes. This unrecorded shared exposure induces correlation between their outcomes. In this survey, the $\eta_{i}$, $C_{i}$ may be correlated. 
+
+- Participants may be from the same group, like the army, where each soldier's weight $W_{i}$, the frequency of smoking $\eta_{i}$, and even lung capacity $L_{i}$ may be similar. These similarities are due to shared, controlled environments and behaviors, leading to high homogeneity within the group. This similarity may lead to the small variance of the survey, as the observations are not truly independent.
+
+-Participants exposed to the same external environment may also have correlated outcomes.
+For instance, individuals working in the same kitchen or polluted workplace may experience similar smoke or airborne irritants, which can affect both lung capacity and cancer risk. This shared exposure generates dependence in the responses, violating the assumption that the $C_{i} $and $L_{i}$ are independent across participants. 
+
+
+## Question (2)
+
+
+```{r}
+#| echo: false
+# Question(2)
+smk <- read.csv("smoking.csv")
+```
+
+
+
+### (a)
+
+Yes, we will loss some information by doing so. We use the definition of probability. The logic proposition $\eta_{i}$ implies logic proposition $S$. Using $S$ may fold the value of $\eta_{i}$, and make it hard for us to do further quantitative analysis. By reducing $\eta_{i} $to $s_{i}$, we lose the ability to distinguish between light, moderate, and heavy smokers. By doing so, our statistical analysis cannot conclude something related to the degree of smoking. 
+
+### (b)
+
+The full likelihood is 
+
+$$
+\mathbb{P}(C_{1:N}|p, q, S_{1:N})=\prod_{i=1,S_{i}}^{n}p^{C_{1}}(1-p)^{1-C_{i}}\prod_{i=1,\neg S_{i}}^{n}q^{C_{1}}(1-q)^{1-C_{i}}.
+$$
+
+We study the distribution of $N_{s,c}$ and $N_{\neg s, c }$, as the assumption of each participates are independent, we have 
+\begin{align*}
+\mathbb{P}(N_{s,c},N_{\neg s, c }|p,q, N_{s}, N_{\neg s}) &= \mathbb{P}(N_{s,c}|p,N_{s})\mathbb{P}(N_{\neg s,c}|q,N_{\neg s})\\
+&=\binom{N_{s}}{N_{s,c}}p^{N_{s,c}}(1-p)^{N_{s}-N_{s,c}}\binom{N_{ \neg s}}{N_{\neg s,c}}q^{N_{\neg s,c}}(1-q)^{N_{\neg s}-N_{\neg s,c}}.
+\end{align*}
+ 
+Hence, the likelihoods are 
+
+$$
+\mathbb{P}(N_{s,c}|p,N_{s})= \binom{N_{s}}{N_{s,c}}p^{N_{s,c}}(1-p)^{N_{s}-N_{s,c}} \ and \ \ \mathbb{P}(N_{\neg s,c}|q,N_{\neg s})=\binom{N_{ \neg s}}{N_{\neg s,c}}q^{N_{\neg s,c}}(1-q)^{N_{\neg s}-N_{\neg s,c}}.
+$$
+In terms of relationship, they belong to the same exponential family, so that we could do the inference in the similar way. 
+
+As for the sufficiency, we verify that 
+
+$$
+\frac{\mathbb{P}(N_{s,c},N_{\neg s, c }|p,q, N_{s}, N_{\neg s})}{\mathbb{P}(C_{1:N}|p, q, S_{1:N})}=\frac{\binom{N_{s}}{N_{s,c}}p^{N_{s,c}}(1-p)^{N_{s}-N_{s,c}}\binom{N_{ \neg s}}{N_{\neg s,c}}q^{N_{\neg s,c}}(1-q)^{N_{\neg s}-N_{\neg s,c}}}{\prod_{i=1,S_{i}}^{n}p^{C_{1}}(1-p)^{1-C_{i}}\prod_{i=1,\neg S_{i}}^{n}q^{C_{1}}(1-q)^{1-C_{i}}}=\binom{N_{s}}{N_{s,c}}\binom{N_{ \neg s}}{N_{\neg s,c}},
+$$
+the last equality holds according to the definition of $N_{s,c}$ and $N_{\neg s,c}$. The result is independent with the parameter we care, so they are joint sufficient statistic. 
+
+
+### (c)
+Assume $q \sim \Theta(q)\Theta(1-q)$, and $p \sim \Theta(p)\Theta(1-p)$, then 
+$$
+\mathbb{P}(p|N_{s,c}, N_{s})\propto\Theta(p)\Theta(1-p)p^{N_{s,c}}(1-p)^{N_{s}-N_{s,c}}\propto \text{Beta}(p;N_{s,c}+1, N_{s}-N_{s,c}+1),
+$$
+and 
+$$
+\mathbb{P}(q|N_{\neg s,c}, N_{\neg s})\propto\Theta(q)\Theta(1-q)q^{N_{\neg s,c}}(1-q)^{N_{\neg s}-N_{\neg s,c}}\propto \text{Beta}(q;N_{\neg s,c}+1, N_{\neg s}-N_{\neg s,c}+1).
+$$
+
+```{r}
+#| echo: false
+smk_yes <- smk[smk$cigarettes > 0, ]
+smk_no  <- smk[smk$cigarettes == 0, ]
+
+smk_no_c <- smk_no[smk_no$cancer == TRUE, ]
+smk_yes_c <- smk_yes[smk_yes$cancer == TRUE, ]
+
+p <- seq(0,1, 0.01)
+
+p_yes <- dbeta(p, nrow(smk_yes_c)+1, nrow(smk_yes) - nrow(smk_yes_c)+1)
+p_no <- dbeta(p, nrow(smk_no_c)+1, nrow(smk_no) - nrow(smk_no_c)+1)
+
+plot(x = p, y = p_yes, xlim = c(0,1), ylim = c(0, max(max(p_yes), max(p_no))), type = "l", xlab = "p", ylab = "Density of the posterior", col = 'red')
+lines(x = p, y = p_no, col = "blue")
+
+```
+Yes, the occurrence of cancer is related to the smoke. The blue line is the posterior density of those people who are not smoking, while the red curve represents the people who smoke.  It is possible for us to recognize for non-smoking people they have less probability than those who smoke, which provides evidence that smoking is linked to lung cancer.
+
+### (d)
+
+The marginal likelihood could be expressed as follows:
+$$
+\mathbb{P}(N_{s,c},N_{\neg s, c }|N_{s}, N_{\neg s},M_{i})=\int \mathbb{P}(N_{s,c},N_{\neg s, c }|p,q, N_{s}, N_{\neg s},M_{i})d\mathbb{P}(p, q|M_{i}).
+$$
+Only $M_{2}$ has closed expression, we shall compare them numerically. 
+
+```{r}
+#| echo: false
+Ns <- nrow(smk_yes)    
+Nsc <- nrow(smk_yes_c)    
+N_ns <- nrow(smk_no)  
+N_nsc <- nrow(smk_no_c)  
+
+C <- choose(Ns, Nsc) * choose(N_ns, N_nsc)
+
+alpha_p <- Nsc + 1
+beta_p <- Ns - Nsc + 1
+
+alpha_q <- N_nsc + 1
+beta_q <- N_ns - N_nsc + 1
+
+alpha_M2 <- alpha_p + alpha_q - 1
+beta_M2 <- beta_p + beta_q - 1
+
+```
+
+
+- $M_{1}$ We solve the marginal likelihood numerically:
+```{r}
+#| echo: false
+inner_integral_q <- function(p) {
+  return(beta(alpha_q, beta_q) * pbeta(p, alpha_q, beta_q))
+}
+
+f_outer_M1 <- function(p) {
+  p_lik <- p^(alpha_p - 1) * (1 - p)^(beta_p - 1)
+  
+  return(p_lik * inner_integral_q(p))
+}
+
+result_integral_M1 <- integrate(f_outer_M1, lower = 0, upper = 1)$value
+P_D_M1 <- C * 2 * result_integral_M1
+cat("The marginal likelihood of M1 is", P_D_M1 )
+```
+
+
+- $M_{2}$
+We calculate the integral w.r.t to the *Dirac* measure, hence we have
+\begin{align*}
+\mathbb{P}(N_{s,c},N_{\neg s, c }|N_{s}, N_{\neg s},M_{2})&=\binom{N_{s}}{N_{s,c}}\binom{N_{ \neg s}}{N_{s,c}}\int_{0}^1p^{N_{s,c}}(1-p)^{N_{s}-N_{s,c}}p^{N_{\neg s,c}}(1-p)^{N_{\neg s}-N_{\neg s,c}}dp\\
+&= \binom{N_{s}}{N_{s,c}}\binom{N_{ \neg s}}{N_{\neg s,c}}\text{Beta}(N_{s,c}+N_{\neg s,c}+1, N_{s}+N_{\neg s}-N_{s,c}+N_{\neg s,c}+1).
+\end{align*}
+
+```{r}
+#| echo: false
+P_D_M2 <- C * beta(alpha_M2, beta_M2)
+cat("The marginal likelihood of M2 is", P_D_M2 )
+```
+
+
+- $M_{3}$ We solve the marginal likelihood numerically:
+
+```{r}
+#| echo: false
+inner_integral_p <- function(q) {
+  # B(alpha, beta) * I_q(alpha, beta)
+  return(beta(alpha_p, beta_p) * pbeta(q, alpha_p, beta_p))
+}
+
+
+f_outer_M3 <- function(q) {
+  q_lik <- q^(alpha_q - 1) * (1 - q)^(beta_q - 1)
+  return(q_lik * inner_integral_p(q))
+}
+
+result_integral_M3 <- integrate(f_outer_M3, lower = 0, upper = 1)$value
+P_D_M3 <- C * 2 * result_integral_M3
+cat("The marginal likelihood of M3 is", P_D_M3 )
+```
+
+We compare the model by finding the Bayes factor:
+
+```{r}
+#| echo: false
+cat("The Bayes factor between M1 and M2 (M1/M2) is", P_D_M1/P_D_M2, "\n")
+cat("The Bayes factor between M1 and M3 (M1/M3) is", P_D_M1/P_D_M3, "\n")
+cat("The Bayes factor between M2 and M3 (M2/M3) is", P_D_M2/P_D_M3, "\n")
+```
+
+From the Bayes factor, there is a strong evidence that $M_{1}$ is outweigh than $M_{2}$ (the evidence for positive link is stronger than unrelated relationship); there is a strong evidence that $M_{1}$ is outweigh than $M_{3}$ (the evidence for positive link is stronger than negative link); there is a strong evidence that $M_{2}$ is outweigh than $M_{3}$ (the evidence for unrelated relationship is stronger than negative link). And these results imply there is a strong evidence that there is a positive link between the smoking and the lung cancer. (We compare the Bayes factor with Jeffery Scale)  
+
+## Question (3)
+
+```{r}
+#| echo: false
+smk <- read.csv("smoking.csv")
+```
+### (a)
+
+We should assume $L$ takes all values on $\mathbb{R}$. It is equivalent to study as the given density as our target density is the linear transformation $Z=(L-(L^{*}+\Delta))/\sigma$ which will not change the finiteness of this integral and under the assumption that $L\in\mathbb{R}$: 
+$$
+\mathbb{P}(Z|\beta) \propto (1+Z^{2})^{-\beta}.
+$$ 
+**Normalization**
+
+We study 
+$$
+\int_{-\infty}^{\infty}(1+Z^{2})^{-\beta}dZ.
+$$
+To make this integral convergent, we need to study the tail. When $Z\rightarrow\infty$, $(1+Z^{2})\approx Z^{2}$, hence we need to require $\int_{0}^{\infty}L^{-2\beta}dZ<\infty$, the sufficient and necessary condition is $\beta>1/2$. 
+
+**Expectation**
+$$
+\mathbb{E}(Z)=\mathbb{E}(Z_{+})-\mathbb{E}(Z_{-}),
+$$
+we just need to ensure $\mathbb{E}(Z_{+})<\infty$ due to $Z(1+Z^{2})^{-\beta}$ is an even function, so that 
+$$
+\mathbb{E}(Z_{+})=\int_{0}^{\infty}Z(1+Z^{2})^{-\beta}dZ=\left.\frac{(1+Z^2)^{-\beta+1}}{2(-\beta+1)}\right|_{0}^{\infty}.
+$$
+Hence, when $1-\beta<0 \Rightarrow \beta>1$, this improper integral will converge, namely the expectation is 0.
+
+**Variance**
+
+Similarly, we should first require $\beta>1$, otherwise no variance exists. We simply verify:
+$$
+\mathbb{E}(Z^{2})=\int_{-\infty}^{\infty}Z^{2}(1+Z^{2})^{-\beta}dL=\left.\frac{Z(1+Z^2)^{-\beta+1}}{2(-\beta+1)}\right|_{-\infty}^{\infty}-\int_{-\infty}^{\infty}\frac{(1+Z^2)^{-\beta+1}}{2(-\beta+1)}dL,
+$$
+From the previous part, the first item converges if and only if $\beta>3/2$ and the second item we use the same idea to normalize the density and we got the it converges if and only if  $\beta>3/2$. We take the intersection so that these two items converge. Hence $\beta>3/2$.
+
+The first condition is necessary to let $\mathbb{P}$ to be a probability density. We don't require this noisy model has expectation or variance, so we choose $\beta>1/2$.
+
+### (b)
+
+- A noise model does not need to enforce physical constraints on the measured quantity. Although the true lung capacity is strictly positive, the probabilistic model is applied to measurement noise, not the physical variable itself. Allowing negative sampled values is therefore not a conceptual problem, as long as the implied probability density is normalisable and behaves reasonably near the physical boundary.
+
+- It is not usually a big problem in practice. If the data are concentrated in some specific region ($\sigma$ is small) which is far away from the negative part, then this outliner cannot have too many effects. But in our background, the data is very noisy, then the occurrance of negative value reflects some property of the interested quantity, which equally contributes the inference with other data.
+
+### (c)
+By Bayes theorem, we have 
+$$
+\mathbb{P}(\Delta, \sigma, \beta|L, L^{*} )\propto \prod_{i=1}^{n} \frac{1}{c(\sigma, \beta)}P(L_{i}|L^{*}, \Delta, \sigma, \beta)\pi(\Delta, \sigma,\beta)=\frac{1}{c(\sigma, \beta)^{n}}\prod_{i=1}^{n}\left\{1 + \frac{\left[L_{i} - (L^* + \Delta)\right]^2}{\sigma^2}\right\}^{-\beta}\Theta(\sigma)\Theta(\beta-2),
+$$
+where $c(\beta, \sigma)=\sqrt{\pi}\cdot \sigma \cdot \frac{\Gamma(\beta-1/2)}{\Gamma(\beta)}$ is the normalized constant of sampling distribution. To verify whether it is a valid posterior, we need to integrate w.r.t $\Delta, \sigma, \beta$. For $\Delta$, as it is in the quadratic form, then when $\Delta \rightarrow -\infty \ \ or \ +\infty$, the density goes to $0$. As for $\sigma$, when $\sigma \rightarrow 0$, the product item is closed to $\prod_{i=1}^{n}\left\{\frac{\left[L_{i} - (L^* + \Delta)\right]^2}{\sigma^2}\right\}^{-\beta}\approx\sigma^{2n\beta}$, then the density is approxiamated as $\sigma^{n(2\beta-1)}$, the exponent is larger than $0$, so the density goes $0$. On the other hand, when $\sigma\rightarrow\infty$, the product item goes to $1$ and the coefficient goes to $0$, the density goes to $0$. As for the $\beta$, we only discuss the case when $\beta\rightarrow\infty$, in the coefficient term, by the property of Gamma function, we have:
+$$
+\frac{\Gamma(\beta-\frac{1}{2})}{\Gamma(\beta)}\approx \sqrt{\beta},
+$$
+while the product item is a exponential function, which goes to $0$ as $\beta\rightarrow\infty$. And when $\beta\rightarrow 2$, the density is finite. We know that the the convergence of exponential function outweigh than the divergence of power function, then the density goes to $0$ as $\beta \rightarrow\infty$. Hence, as the density function is larger than $0$, we conclude this density function could be normalized, then it is valid. 
+
+```{r}
+#| echo: false
+# Question (3)
+likelihood <- function(theta, L_data, L_star = 3.44){
+    Delta <- theta[1]
+    sigma <- theta[2]
+    beta <- theta[3]
+    return((1 + (L_data - (L_star+Delta))**2 / sigma**2) ** (-beta))
+}
+
+constant <- function(theta){
+    Delta <- theta[1]
+    sigma <- theta[2]
+    beta <- theta[3]
+
+    f <- function(L){
+      likelihood(theta,L)
+    }
+    
+    k <- sigma * sqrt(pi) * gamma(beta - 0.5) / gamma(beta)
+    return(k)
+}
+```
+
+### (d)
+
+```{r}
+#| echo: false
+calibration <- read.csv("calibration.csv")
+cal <- calibration$Calibration
+```
+
+```{r}
+#| echo: false
+log_posterior <- function(theta, L_data, L_star = 3.44) {
+    
+    Delta <- theta[1]
+    sigma <- theta[2]
+    beta <- theta[3]
+    M <- length(L_data) 
+    
+
+    if (sigma <= 0 || beta <= 2) {
+        return(-Inf) 
+    }
+    log_prior <- -2  * log(beta) 
+    
+    residuals <- L_data - (L_star + Delta)
+    
+    log_likelihood_i <- -beta * log(1 + residuals^2 / sigma^2)
+    
+    log_likelihood <- sum(log_likelihood_i)-M*log(constant(theta))
+    
+    log_post <- log_prior + log_likelihood
+    
+    return(log_post)
+}
+```
+
+
+```{r}
+#| echo: false
+#| fig-height: 2.8  
+#| fig-width: 10
+#| fig-cap: "The mariginal distribution of each parameters"
+
+set.seed(42)
+nsmp <- 1e7
+theta_initial <- c(0, 0.5, 3)
+posterior <- metrop(
+  obj = log_posterior, initial = theta_initial, nbatch = nsmp, L_data = cal)
+
+# Extract out samples for the two parameters for ease of use.
+
+delta <- posterior$batch[, 1]
+sigma <- posterior$batch[, 2]
+beta  <- posterior$batch[, 3] 
+
+# Remove the first 1000 samples to avoid possible burn-in.
+
+nsmp_burnin <- 10000
+delta <- posterior$batch[, 1]
+sigma <- posterior$batch[, 2]
+beta  <- posterior$batch[, 3]
+par(mfrow=c(1,3))
+nbin <- 100
+
+breaks_delta <- seq(from = min(delta), to = max(delta), length.out = nbin)
+breaks_sigma <- seq(from = min(sigma), to = max(sigma), length.out = nbin)
+breaks_beta <- seq(from = min(beta), to = max(beta), length.out = nbin)
+
+hist(delta, xlim = range(delta), breaks = breaks_delta, main = "", freq = FALSE,
+  col = "blue",
+  xlab = "Delta", ylab = "posterior density (arbitrary normalisation)")
+abline(v = mean(delta), lwd = 3)
+
+hist(sigma, xlim = range(sigma), breaks = breaks_sigma, main = "", freq = FALSE,
+  col = "yellow",
+  xlab = "Sigma", ylab = "posterior density (arbitrary normalisation)")
+abline(v = mean(sigma),lwd = 3)
+
+hist(beta, xlim = range(beta), breaks = breaks_beta, main = "", freq = FALSE,
+  col = "red",
+  xlab = "Beta", ylab = "posterior density (arbitrary normalisation)")
+abline(v = mean(beta),lwd = 3)
+
+
+```
+
+We plot the joint the distribution of $\Delta$ and $\beta$:
+```{r}
+#| echo: false
+#| fig-height: 4
+#| fig-width: 8
+#| fig-cap: "The joint distribution between Delta and Beta"
+
+plot(x = beta, y = delta, xlab = "Beta", ylab = "Delta", ylim = range(delta), xlim =range(beta), col = "red",pch = ".")
+```
+
+We then answer the next two questions:
+
+In terms of the systematic bias, we should focus on the plot of $\Delta$. The most density are concentrating near the center of $0.3$, suggesting there isn't severe bias in our observations. In addition to this, the range of $\Delta$ is not wide. 
+
+In terms of the heavy tail, we should focus on the plot of $\beta$, we see that the most density is crowded at the low-$\beta$ area. From the background, we consider this provides the evidence that our posterior is heavy tail. And from the joint distribution, most outliers ($\Delta$ is large) correspond to the low $\beta$, which offer evidence that the heavy tail leads outliers.
+
+
+## Question (4)
+
+### (a)
+
+```{r}
+#| echo: false
+# Question (4)
+model <- glm(capacity ~ log(age) + log(weight) + cigarettes, data = smk, weight = rep((1/0.3)**2, nrow(smk)))
+summary(model)
+```
+From generalized linear model, we have no evidence to reject $\beta_{1}=0$ and $\beta_{2}=0$ as the two-tail probability (p-value) is larger than $0.1$. There is a weak evidence that we can reject $\beta_3=0$ as the p-value is between $0.05$ and $0.1$. This suggests the number of cigarettes may have negative link to the capacity of lung.
+
+### (b)
+
+Since the following function 
+\begin{align*}
+\mathbb{P}(L|L^{*}, \Delta, \beta, \sigma)
+&=\{1+\frac{(L-(L^{*}+\Delta))^{2}}{\sigma^2}\}^{-\beta}\\
+&=\exp(-\beta\cdot\log (1+\frac{(L-(L^{*}+\Delta))^{2}}{\sigma^{2}}))
+\end{align*}
+doesn't belong to exponential family as it cannot be expressed as $\mathbb{P}(L|L^{*}, \Delta, \beta, \sigma)\propto h(L)\exp(\theta T(L)+f(\theta))$, hence there is no link such that we can use `glm` to estimate the parameter. 
+```{r}
+#| echo: false
+suppressPackageStartupMessages(
+  library("rstanarm", quietly = TRUE, verbose = FALSE)
+)
+```
+
+We plot them via `Stan`:
+```{r}
+#| echo: false
+#| fig-height: 6 
+#| fig-width: 10
+
+par(mfrow = c(2,2))
+coe <- model$coefficients
+posterior_stan <- stan_glm(capacity ~ log(age) + log(weight) + cigarettes , data = smk,
+  family = gaussian(link = "identity"),
+  QR = TRUE, algorithm = "sampling", refresh = 0,
+  prior = NULL, prior_intercept = NULL,
+  prior_aux = normal(location = 1, scale = 1e-5, autoscale = FALSE)
+  )
+
+posterior_samples <- as.matrix(posterior_stan)[, 1:4]
+
+for (i in 1: ncol(posterior_samples)){
+  hist(posterior_samples[ , i], probability = TRUE, xlab = "Coefficient", ylab = "Density", main = paste("beta", i-1, "Histogram"),  border = "yellow", breaks = 40, las = 1, cex.axis = 0.8, cex.main = 1.0)
+  abline(v = coe[i], col = "red")
+}
+
+
+
+```
+Compare the result with (a), we can see that the estimated values we got in (a) (red lines) are very closed to the centers of the marginal distribution of each slopes in (b). I consider the second method is much more reliable as it provides the empirical marginal distribution of each coefficient. In (a), we need to follow the rules of hypothesis test and the p-values told us we have no evidence to reject the null hypothesis. Therefore, we tend to choose the second method. 
+
+### (c)
+I consider a more general case:
+
+- We consider $\mathbb{P}(C, L|\Delta, \sigma, \beta,d)=\sum_{i \in \{0,1\}}\mathbb{P}(L|C =i, \Delta, \sigma, \beta,d)\mathbb{P}(C=i|\Delta, \sigma, \beta,d),$ where $d=(L_{d}, C_{d})$ is the a package of data of capacity and cancer. Under this case, suppose we could inference the posterior, it will be easy for us to give the output of capacity and cancer.  
+
+- For the first item, I try to introduce a further $C$ to the linear model of estimator, namely $L\sim\log(A)+\log(W)+\eta+C$.
+
+- We then need to figure out the second item. Note that it is a model related to probability, we could use `glm` by choosing "Logit" link function to fit our model,namely, $C\sim\log(A)+\log(W)+\eta$
+
+- To make the prediction, we could first plug the values into the second item, which will generate a probability $p$, where $p=\mathbb{P}(C=1)$. Generate a uniform random variable $u$ on $[0,1]$, if $u\leq p$, then we choose $C=1$ in the first item, vice versa.  
+
+# Code appendix
+
+```{r ref.label=knitr::all_labels(), echo = T, eval = F}
+```
